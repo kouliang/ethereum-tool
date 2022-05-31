@@ -48,7 +48,7 @@ func SendTransaction(addressStr string, callData []byte, amount *big.Int, defaul
 	var logInfo string
 
 	contractAddress := common.HexToAddress(addressStr)
-	logInfo = logInfo + fmt.Sprintf("\ncontract address:%s", contractAddress.Hex())
+	logInfo = logInfo + fmt.Sprintf("contract address:%s", contractAddress.Hex())
 
 	nonce, err := Client.PendingNonceAt(context.Background(), FromAddress)
 	if err != nil {
