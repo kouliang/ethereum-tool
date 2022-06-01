@@ -14,27 +14,27 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var Client *ethclient.Client
-var ChainID *big.Int
+var client *ethclient.Client
+var privateKey *ecdsa.PrivateKey
 
-var PrivateKey *ecdsa.PrivateKey
+var ChainID *big.Int
 var FromAddress common.Address
 
 func InitClient(rpc string, privateStr string) (err error) {
-	Client, err = ethclient.Dial(rpc)
+	client, err = ethclient.Dial(rpc)
 	if err != nil {
 		return
 	}
-	ChainID, err = Client.NetworkID(context.Background())
+	ChainID, err = client.NetworkID(context.Background())
 	if err != nil {
 		return
 	}
 
-	PrivateKey, err = crypto.HexToECDSA(privateStr)
+	privateKey, err = crypto.HexToECDSA(privateStr)
 	if err != nil {
 		return
 	}
-	publicKey := PrivateKey.Public()
+	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
 		err = fmt.Errorf("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
@@ -44,50 +44,46 @@ func InitClient(rpc string, privateStr string) (err error) {
 	return
 }
 
-func SendTransaction(addressStr string, callData []byte, amount *big.Int, defaultGasPrice int64) (string, error) {
-	var logInfo string
+func SuggestGasPrice() (*big.Int, error) {
+	return client.SuggestGasPrice(context.Background())
+}
 
-	contractAddress := common.HexToAddress(addressStr)
-	logInfo = logInfo + fmt.Sprintf("contract address:%s", contractAddress.Hex())
+func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []byte, log logger) error {
+	contractAddress := common.HexToAddress(to)
+	log.Println("contract address:", contractAddress.Hex())
 
-	nonce, err := Client.PendingNonceAt(context.Background(), FromAddress)
+	nonce, err := client.PendingNonceAt(context.Background(), FromAddress)
 	if err != nil {
-		return logInfo, err
+		return err
 	}
 
-	gasPrice, err := Client.SuggestGasPrice(context.Background())
-	if err != nil {
-		gasPrice = big.NewInt(defaultGasPrice)
-		logInfo = logInfo + fmt.Sprintf("\ngsaPrice error:%s", err.Error())
-	}
-
-	gasLimit, err := Client.EstimateGas(context.Background(), ethereum.CallMsg{
+	gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
 		From: FromAddress,
 		To:   &contractAddress,
 		Data: callData,
 	})
 	if err != nil {
-		return logInfo, err
+		return err
 	}
 
 	tx := types.NewTransaction(nonce, contractAddress, amount, gasLimit, gasPrice, callData)
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(ChainID), PrivateKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(ChainID), privateKey)
 	if err != nil {
-		return logInfo, err
+		return err
 	}
-	logInfo = logInfo + fmt.Sprintf("\nnonce:%d gasPrice:%v gasLimit:%d", nonce, gasPrice, gasLimit)
+	log.Printf("nonce:%d gasPrice:%v gasLimit:%d\n", nonce, gasPrice, gasLimit)
 
-	err = Client.SendTransaction(context.Background(), signedTx)
+	err = client.SendTransaction(context.Background(), signedTx)
 	if err != nil {
-		return logInfo, err
+		return err
 	}
-	logInfo = logInfo + fmt.Sprintf("\ntx broadcast:%s", signedTx.Hash().Hex())
+	log.Println("tx broadcast:", signedTx.Hash().Hex())
 
-	receipt, err := bind.WaitMined(context.Background(), Client, signedTx)
+	receipt, err := bind.WaitMined(context.Background(), client, signedTx)
 	if err != nil {
-		return logInfo, err
+		return err
 	}
-	logInfo = logInfo + fmt.Sprintf("\nreceipted - status:%d, blockNumber:%s", receipt.Status, receipt.BlockNumber.String())
+	log.Printf("receipted - status:%d, blockNumber:%s\n", receipt.Status, receipt.BlockNumber.String())
 
-	return logInfo, nil
+	return nil
 }
