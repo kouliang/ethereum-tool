@@ -48,6 +48,15 @@ func SuggestGasPrice() (*big.Int, error) {
 	return client.SuggestGasPrice(context.Background())
 }
 
+func Call(to string, callData []byte) ([]byte, error) {
+	contractAddress := common.HexToAddress(to)
+	return client.CallContract(context.Background(), ethereum.CallMsg{
+		From: FromAddress,
+		To:   &contractAddress,
+		Data: callData,
+	}, nil)
+}
+
 func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []byte, log logger) error {
 	contractAddress := common.HexToAddress(to)
 	log.Println("contract address:", contractAddress.Hex())
