@@ -81,9 +81,10 @@ func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []b
 
 	receipt, err := bind.WaitMined(context.Background(), client, signedTx)
 	if err != nil {
-		return err
+		log.Println(err)
+	} else {
+		log.Printf("receipted - status:%d, blockNumber:%s\n", receipt.Status, receipt.BlockNumber.String())
 	}
-	log.Printf("receipted - status:%d, blockNumber:%s\n", receipt.Status, receipt.BlockNumber.String())
 
 	return nil
 }
