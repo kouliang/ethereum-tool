@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -51,13 +52,24 @@ func SuggestGasPrice() (*big.Int, error) {
 // callData, err := nftpool.Pack("dividingTime")
 // resultData, err := client.Call(nftPoolAddress, callData)
 // result, err := nftpool.Unpack("dividingTime", resultData)
-func Call(to string, callData []byte) ([]byte, error) {
+func Call(to string, abi abi.ABI, name string, args ...interface{}) ([]interface{}, error) {
 	contractAddress := common.HexToAddress(to)
-	return client.CallContract(context.Background(), ethereum.CallMsg{
+
+	callData, err := abi.Pack(name, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	resultData, err := client.CallContract(context.Background(), ethereum.CallMsg{
 		From: FromAddress,
 		To:   &contractAddress,
 		Data: callData,
 	}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return abi.Unpack(name, resultData)
 }
 
 func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []byte, log logger) error {
