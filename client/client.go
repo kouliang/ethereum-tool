@@ -78,7 +78,7 @@ func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []b
 
 	nonce, err := client.PendingNonceAt(context.Background(), FromAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("get nonce error. %s", err.Error())
 	}
 
 	gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
@@ -87,25 +87,25 @@ func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []b
 		Data: callData,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("get gaslimit error. %s", err.Error())
 	}
 
 	tx := types.NewTransaction(nonce, contractAddress, amount, gasLimit, gasPrice, callData)
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(ChainID), privateKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("sign tx error. %s", err.Error())
 	}
 	log.Printf("nonce:%d gasPrice:%v gasLimit:%d\n", nonce, gasPrice, gasLimit)
 
 	err = client.SendTransaction(context.Background(), signedTx)
 	if err != nil {
-		return err
+		return fmt.Errorf("send transaction error. %s", err.Error())
 	}
 	log.Println("tx broadcast:", signedTx.Hash().Hex())
 
 	receipt, err := bind.WaitMined(context.Background(), client, signedTx)
 	if err != nil {
-		log.Println(err)
+		log.Println("wait mined error.", err)
 	} else {
 		log.Printf("receipted - status:%d, blockNumber:%s\n", receipt.Status, receipt.BlockNumber.String())
 	}
