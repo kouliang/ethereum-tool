@@ -52,7 +52,7 @@ func SuggestGasPrice() (*big.Int, error) {
 // callData, err := nftpool.Pack("dividingTime")
 // resultData, err := client.Call(nftPoolAddress, callData)
 // result, err := nftpool.Unpack("dividingTime", resultData)
-func Call(to string, abi abi.ABI, name string, args ...interface{}) ([]interface{}, error) {
+func Call(to string, abi *abi.ABI, name string, args ...interface{}) ([]interface{}, error) {
 	contractAddress := common.HexToAddress(to)
 
 	callData, err := abi.Pack(name, args...)
