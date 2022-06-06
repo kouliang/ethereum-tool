@@ -72,7 +72,7 @@ func Call(to string, abi *abi.ABI, name string, args ...interface{}) ([]interfac
 	return abi.Unpack(name, resultData)
 }
 
-func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []byte, log logger) error {
+func SendTransactionTo(to string, callData []byte, log logger) error {
 	contractAddress := common.HexToAddress(to)
 	log.Println("contract address:", contractAddress.Hex())
 
@@ -90,12 +90,42 @@ func SendTransaction(to string, amount *big.Int, gasPrice *big.Int, callData []b
 		return fmt.Errorf("get gaslimit error. %s", err.Error())
 	}
 
-	tx := types.NewTransaction(nonce, contractAddress, amount, gasLimit, gasPrice, callData)
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return fmt.Errorf("get gasPrice error. %s", err.Error())
+	}
+
+	tx := types.NewTransaction(nonce, contractAddress, big.NewInt(0), gasLimit, gasPrice, callData)
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(ChainID), privateKey)
 	if err != nil {
 		return fmt.Errorf("sign tx error. %s", err.Error())
 	}
 	log.Printf("nonce:%d gasPrice:%v gasLimit:%d\n", nonce, gasPrice, gasLimit)
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		return fmt.Errorf("send transaction error. %s", err.Error())
+	}
+	log.Println("tx broadcast:", signedTx.Hash().Hex())
+
+	receipt, err := bind.WaitMined(context.Background(), client, signedTx)
+	if err != nil {
+		log.Println("wait mined error.", err)
+	} else {
+		log.Printf("receipted - status:%d, blockNumber:%s\n", receipt.Status, receipt.BlockNumber.String())
+	}
+
+	return nil
+}
+
+func SendTransaction(tx *types.Transaction, log logger) error {
+
+	log.Printf("nonce:%d gasPrice:%v gasLimit:%d\n", tx.Nonce, tx.GasPrice, tx.Gas)
+
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(ChainID), privateKey)
+	if err != nil {
+		return fmt.Errorf("sign tx error. %s", err.Error())
+	}
 
 	err = client.SendTransaction(context.Background(), signedTx)
 	if err != nil {
