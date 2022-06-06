@@ -45,6 +45,10 @@ func InitClient(rpc string, privateStr string) (err error) {
 	return
 }
 
+func Nonce() (uint64, error) {
+	return client.PendingNonceAt(context.Background(), FromAddress)
+}
+
 func SuggestGasPrice() (*big.Int, error) {
 	return client.SuggestGasPrice(context.Background())
 }
