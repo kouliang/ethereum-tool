@@ -53,6 +53,15 @@ func SuggestGasPrice() (*big.Int, error) {
 	return client.SuggestGasPrice(context.Background())
 }
 
+func EstimateGas(to string, callData []byte) (uint64, error) {
+	contractAddress := common.HexToAddress(to)
+	return client.EstimateGas(context.Background(), ethereum.CallMsg{
+		From: FromAddress,
+		To:   &contractAddress,
+		Data: callData,
+	})
+}
+
 // callData, err := nftpool.Pack("dividingTime")
 // resultData, err := client.Call(nftPoolAddress, callData)
 // result, err := nftpool.Unpack("dividingTime", resultData)
