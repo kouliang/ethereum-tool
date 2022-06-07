@@ -124,7 +124,8 @@ func SendTransactionTo(to string, callData []byte, log logger) error {
 
 func SendTransaction(tx *types.Transaction, log logger) error {
 
-	log.Printf("nonce:%d gasPrice:%v gasLimit:%d\n", tx.Nonce, tx.GasPrice, tx.Gas)
+	log.Println("contract address:", tx.To().Hex())
+	log.Printf("nonce:%d gasPrice:%v gasLimit:%d\n", tx.Nonce(), tx.GasPrice(), tx.Gas())
 
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(ChainID), privateKey)
 	if err != nil {
